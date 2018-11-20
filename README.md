@@ -7,6 +7,8 @@ trying to manually kludge the same thing together with jQuery and
 a bunch of state management. If you've got any better/more concise
 ideas how to do what is being done here, please let me know.
 
+You can view it in action at https://hypercomplex.net/mithrildemo/
+
 It attempts to simulate a login/logout mechanism, a database of
 articles, and a search mechanism for those articles.
 
