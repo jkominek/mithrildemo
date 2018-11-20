@@ -1,13 +1,14 @@
 var Index = {
     view: function() {
-	return m('ul',
-		 lorem.map(function(v, i) {
-		     return m('li',
-			      m('a', {href:"/article/"+i,oncreate:m.route.link},
-				i),
-			      " ",
-			      v.substr(0, 20)+"...")
-		 }))
+	var items = 
+	    lorem.map(function(v, i) {
+		return m('li',
+			 m('a', {href:"/article/"+i,oncreate:m.route.link},
+			   i),
+			 " ",
+			 v.substr(0, 20)+"...")
+	    });
+	return m('ul', items);
     }
 }
 
@@ -16,54 +17,54 @@ var Submit = {
 	var textarea = m('textarea');
 	return m('div', [
 	    textarea,
+	    m('br'),
 	    m('button', {
 		onclick: function() {
 		    lorem.push(textarea.dom.value);
 		    m.route.set("/index");
 		}
-	    },
-	      "Submit!"
-	     )
+	    }, "Submit!")
 	]);
     }
 }
 
+// Lots of other ways you could do these bits of static content.
 var FAQ = {
     view: function() {
-	return [
-	    m('div',
-	      "So far, all zero questions which have been asked were frequently asked. Including every question in the FAQ is too many, and so, none of them have been included. Alas.")
-	];
+	return m('div', [
+	    "So far, all zero questions which have been asked were frequently asked. Including every question in the FAQ is too many, and so, none of them have been included. Alas."
+	]);
     }
 }
 
 var Support = {
     view: function() {
 	var url = 'http://github.com/jkominek/mithrildemo';
-	return [
-	    m('div',
-	      "See the github page for this, which probably something like",
-	      m('a', {href:url}, url),
-	      ".")
-	]
+	return  m('div', [
+	    "See the github page for this, which probably something like",
+	    m('a', {href:url}, url),
+	    "."
+	]);
     }
 }
 
 var About = {
     view: function() {
-	return m('div',
-		 "This is a demo of making a single page app with Mithril. It was written by Jay Kominek, with style inspired by Hacker News.");
+	return m('div', [
+	    "This is a demo of making a single page app with Mithril. It was written by Jay Kominek, with style inspired by Hacker News."
+	]);
     }
 }
 
 var Legal = {
     view: function() {
-	return m('div',
-		 "Hopefully everything here is MIT licensed:",
-		 m('div', 'Mithril says it is MIT licensed. Good.'),
-		 m('div', 'The little cog icon said it was MIT licensed. Good.'),
-		 m('div', 'The stuff Jay wrote is definitely MIT licensed. Good.'),
-		 "That about covers it?")
+	return m('div', [
+	    "This is licensed for you to reuse:",
+	    m('div', 'Mithril says it is MIT licensed. Good.'),
+	    m('div', 'The little cog icon said it was MIT licensed. Good.'),
+	    m('div', 'The stuff Jay wrote is CC0 "licensed". Good.'),
+	    "That about covers it?"
+	])
     }
 }
 
@@ -76,6 +77,8 @@ var Contact = {
 var searchString = '';
 var searchResults = null;
 var Search = {
+    // we won't clean up the search results when leaving the
+    // search screen. i always find i want to see them again.
     view: function() {
 	var rendered_results = "";
 	if(searchResults) {
@@ -121,6 +124,12 @@ var Article = {
 /* User state management */
 
 var loggedInAs = false;
+var loginFailureMessage = false;
+/* if the auth_required function catches a route request and
+ * redirects it to the login screen, it'll store the requested
+ * route here, and Login will send us there upon success.
+ */
+var desiredPathAwaitingAuth = false;
 
 var Logout = {
     view: function() {
@@ -130,30 +139,69 @@ var Logout = {
     }
 }
 
-/* if the auth_required function catches a route request and
- * redirects it to the login screen, it'll store the requested
- * route here, and Login will send us there upon success.
- */
-var desiredPathAwaitingAuth = null;
+/* Receives the username and password */
+function handleLoginInAttempt(username, password, onSuccess, onFailure) {
+    // you could leave the Login view alone and replace the
+    // guts here with something to make your login calls.
+    if(true) {
+	loggedInAs = username;
+	onSuccess();
+    } else {
+	onFailure("foo");
+    }
+}
 
 var Login = {
+    onremove: function() {
+	// clear the failure message when we leave the login view
+	loginFailureMessage = false;
+    },
     view: function() {
-	var username = m('input', {type: 'text'});
-	function handler() {
-	    loggedInAs = username.dom.value;
+	function onSuccess() {
+	    // if a destination was stored, go there, otherwise
+	    // just go to the index URL
 	    if(desiredPathAwaitingAuth) {
 		m.route.set(desiredPathAwaitingAuth);
-		desiredPathAwaitingAuth = null;
+		desiredPathAwaitingAuth = false;
 	    } else {
 		m.route.set("/index");
 	    }
 	}
-	username.attrs["onchange"] = handler;
-	console.log(username);
-	x = m('div', [
-	    m('div', ['username:', username]),
-	    m('button', { onclick: handler }, "Log In")
-	]);
+	function onFailure(errormsg) {
+	    loginFailureMessage = errormsg;
+	    m.redraw();
+	}
+
+	var username = m('input', {type: 'text', autofocus: true});
+	var password = m('input', {type: 'password'});
+	function username_handler() {
+	    password.dom.focus();
+	}
+	function password_handler() {
+	    handleLoginInAttempt(username.dom.value, password.dom.value,
+				 onSuccess, onFailure);
+	}
+	username.attrs["onchange"] = username_handler;
+	password.attrs["onchange"] = password_handler;
+
+	x = m('table', { id: "passwordform" },
+	      m('tr',
+		m('td', 'username:'),
+		m('td', username)),
+	      m('tr',
+		m('td', 'password:'),
+		m('td', password)),
+	      m('tr',
+		m('td'),
+		m('td',
+		  m('button', {onclick: password_handler},
+		    "Log In"))),
+	      loginFailureMessage
+	      ? m('tr',
+		  m('td', {id: "errormsg"},
+		    loginFailureMessage))
+	      : ""
+	     );
 	return x;
     }
 }
@@ -161,12 +209,14 @@ var Login = {
 /* Renders a little bit in the menu bar about the logged in user */
 var UserStatus = {
     view: function() {
+	// display a login link if we're not logged in
 	if(!loggedInAs) {
 	    return m('a', {id:"login", href:"/login", oncreate:m.route.link},
 		     "login")
 	}
+	// otherwise something useful, and a logout link
 	return [
-	    m('a', {id:"me",
+	    m('a', {id:"userinfo",
 		    href:"/userinfo",
 		    oncreate:m.route.link},
 	      loggedInAs),
@@ -190,7 +240,14 @@ function auth_required(destination) {
 	    if(loggedInAs)
 		return destination;
 	    else {
-		desiredPathAwaitingAuth = requestedPath;
+		// i hate those sites that get confused and think
+		// that you're logging in just to go to the logout
+		// page. ugh.
+		if(!requestedPath.startsWith("/logout")) {
+		    desiredPathAwaitingAuth = requestedPath;
+		} else {
+		    desiredPathAwaitingAuth = false;
+		}
 		m.route.set("/login");
 	    }
 	}
@@ -211,6 +268,9 @@ document.addEventListener("DOMContentLoaded", function() {
 	"/contact": Contact,
 	"/search": auth_required(Search),
 	"/article/:id": auth_required(Article),
+
+	// unimplemented
+	// "/userinfo": auth_required(Userinfo),
 	
 	"/login": Login,
 	"/logout": auth_required(Logout),

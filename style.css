@@ -50,6 +50,16 @@ table#main td#footer {
     text-align: center;
 }
 
+table#passwordform {
+    margin-left: auto;
+    margin-right: auto;
+    border: 0;
+}
+
+#errormsg {
+    color: red;
+}
+
 a {
     text-decoration: none;
 }
